@@ -1,5 +1,5 @@
 """
-Module 3 - Combined: Retrain Model and Register ONNX Version
+Module 4 - Combined: Retrain Model and Register ONNX Version
 =============================================================
 
 This script combines model retraining with ONNX conversion and MLflow registration.
@@ -46,6 +46,9 @@ from mlflow.models import infer_signature
 # ONNX conversion imports
 from skl2onnx import convert_sklearn
 from skl2onnx.common.data_types import FloatTensorType, StringTensorType
+
+# Get username for unique naming in workshop environment
+USERNAME = os.environ["PROJECT_OWNER"]
 
 # Get the project root directory (CML jobs run from /home/cdsw)
 try:
@@ -111,12 +114,15 @@ def convert_to_onnx(model_pipeline, sample_data, categorical_features, numerical
             initial_types.append((feature, StringTensorType([None, 1])))
     
     print(f"   Input schema: {len(numerical_features)} numerical, {len(categorical_features)} categorical features")
-    
+
     # Convert sklearn pipeline to ONNX
+    # Set zipmap=False to ensure Triton-compatible TENSOR output types (not SEQUENCE)
+    options = {id(model_pipeline): {'zipmap': False}}
     onnx_model = convert_sklearn(
         model=model_pipeline,
         initial_types=initial_types,
-        target_opset=12  # Use opset 12 for broad compatibility
+        target_opset=12,  # Use opset 12 for broad compatibility
+        options=options
     )
     
     # Log ONNX version as metadata
@@ -146,8 +152,8 @@ def main():
     print("\n[PHASE 1] Setup MLflow and Load Data")
     print("-" * 80)
     
-    # Setup MLflow experiment
-    EXPERIMENT_NAME = "banking_onnx_retraining_pipeline"
+    # Setup MLflow experiment (unique per user for workshop)
+    EXPERIMENT_NAME = f"banking_onnx_retraining_pipeline_{USERNAME}"
     setup_mlflow(EXPERIMENT_NAME)
     print(f"✅ MLflow experiment: {EXPERIMENT_NAME}")
     
@@ -290,9 +296,9 @@ def main():
             numerical_features=numerical_features
         )
         
-        # Register model name
-        REGISTERED_MODEL_NAME = "BankingCampaignPredictor_ONNX"
-        
+        # Register model name (unique per user for workshop)
+        REGISTERED_MODEL_NAME = f"BankingCampaignPredictor_ONNX_{USERNAME}"
+
         print(f"\n📦 Logging and registering ONNX model...")
         print(f"   Model name: {REGISTERED_MODEL_NAME}")
         
